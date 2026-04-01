@@ -2,13 +2,15 @@ mod controllers;
 mod services;
 mod repositories;
 mod models;
-mod dtos;
 
-use repositories::WorkoutRepositoryImpl;
+use repositories::PostgresWorkoutRepository;
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
 async fn main() {
+    // Load environment variables from .env file
+    dotenv::dotenv().ok();
+
     println!("Tren API - Starting...");
 
     // Database connection example (requires DATABASE_URL env var)
@@ -22,9 +24,9 @@ async fn main() {
         {
             Ok(pool) => {
                 // Dependency injection: create repository with pool
-                let workout_repo = WorkoutRepositoryImpl::new(pool);
+                let workout_repo = PostgresWorkoutRepository::new(pool);
                 println!("Database connected successfully");
-                println!("WorkoutRepository ready for injection: {:?}", &workout_repo);
+                println!("PostgreSQL Repository ready for injection: {:?}", &workout_repo);
             }
             Err(e) => {
                 eprintln!("Failed to connect to database: {}", e);

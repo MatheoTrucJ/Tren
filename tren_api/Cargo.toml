@@ -7,6 +7,9 @@ edition = "2021"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
+# Async trait support
+async-trait = "0.1"
+
 # Web framework for HTTP endpoints
 axum = "0.7"
 tower = "0.4"

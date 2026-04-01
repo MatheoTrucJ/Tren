@@ -1,69 +1,67 @@
 use chrono::{DateTime, Utc};
-use sqlx::FromRow;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
-    pub user_id: i32,
+    pub id: i32,
     pub username: String,
-    pub password: String,
-    pub birth_year: i32,
-    pub created_at: DateTime<Utc>,
+    // ... other fields
 }
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Exercise {
-    pub exercise_id: i32,
-    pub exercise_name: String,
+    pub id: i32,
+    pub name: String,
     pub description: String,
 }
 
-#[derive(Debug, Clone, FromRow)]
-pub struct GeneralExercise {
-    pub exercise_id_fk: i32,
-}
+// --- TEMPLATES ---
 
-#[derive(Debug, Clone, FromRow)]
-pub struct UserExercise {
-    pub exercise_id_fk: i32,
-    pub user_id_fk: i32,
-}
-
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workout {
-    pub workout_id: i32,
-    pub workout_name: String,
-    pub user_id_fk: i32,
+    pub id: i32,
+    pub name: String,
+    pub user_id: i32,
+    pub exercises: Vec<WorkoutExercise>, 
 }
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutExercise {
-    pub workout_exercise_id: i32,
-    pub exercise_id_fk: i32,
-    pub workout_id_fk: i32,
+    pub exercise: Exercise,
+    pub order_index: i32,
+    pub sets: Vec<WorkoutSet>,
 }
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutSet {
-    pub workout_set_id: i32,
+    pub id: i32,
     pub set_number: i32,
-    pub workout_exercise_id_fk: i32,
 }
 
-#[derive(Debug, Clone, FromRow)]
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutSession {
-    pub session_id: i32,
+    pub id: i32,
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub notes: String,
-    pub workout_id_fk: i32,
+    pub end_time: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
+    pub logged_exercises: Vec<SessionExerciseLog>,
 }
 
-#[derive(Debug, Clone, FromRow)]
-pub struct SetLog {
-    pub set_log_id: i32,
-    pub weight: f64,
-    pub reps: i32,
-    pub set_note: String,
-    pub workout_set_id_fk: i32,
-    pub session_id_fk: i32,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionExerciseLog {
+    pub exercise: Exercise,
+    pub sets: Vec<SetLog>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetLog {
+    pub id: i32,
+    pub weight: Option<f64>,
+    pub reps: i32,
+    pub note: Option<String>,
+    // Optional: link back to the template set if they followed it
+    pub template_set_id: Option<i32>, 
+}
+
+
