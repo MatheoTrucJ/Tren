@@ -35,7 +35,7 @@ pub struct WorkoutExercise {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutSet {
     pub id: i32,
-    pub set_number: i32,
+    pub set_order: i32,
 }
 
 
