@@ -1,15 +1,8 @@
-use sqlx::{PgPool, FromRow};
+use sqlx::PgPool;
 use crate::models::Workout;
+use crate::rows::WorkoutRow;
 use anyhow::Result;
 use async_trait::async_trait;
-
-/// Database row model for workout (maps directly to SQL)
-#[derive(Debug, Clone, FromRow)]
-struct WorkoutRow {
-    workout_id: i32,
-    workout_name: String,
-    user_id_fk: i32,
-}
 
 /// Trait for workout data access operations
 #[async_trait]
@@ -34,7 +27,7 @@ impl PostgresWorkoutRepository {
 impl WorkoutRepository for PostgresWorkoutRepository {
     async fn get_workout_by_id(&self, workout_id: i32) -> Result<Workout> {
         let row = sqlx::query_as::<_, WorkoutRow>(
-            "SELECT workout_id, workout_name, user_id_fk FROM workout WHERE workout_id = $1"
+            "SELECT id, name, user_id FROM workout WHERE id = $1"
         )
         .bind(workout_id)
         .fetch_one(&self.pool)
@@ -42,10 +35,10 @@ impl WorkoutRepository for PostgresWorkoutRepository {
 
         // Map database row to domain model
         let workout = Workout {
-            id: row.workout_id,
-            name: row.workout_name,
-            user_id: row.user_id_fk,
-            exercises: vec![],  // Exercises would be fetched separately
+            id: row.id,
+            name: row.name,
+            user_id: row.user_id,
+            exercises: vec![],  // TODO: Fetch exercises separately
         };
 
         Ok(workout)

@@ -12,7 +12,7 @@ DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(36) UNIQUE NOT NULL,
-    password VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(100) NOT NULL,
     birth_year INT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

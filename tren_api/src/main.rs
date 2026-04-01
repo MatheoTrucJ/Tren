@@ -2,6 +2,7 @@ mod controllers;
 mod services;
 mod repositories;
 mod models;
+mod rows;
 
 use repositories::PostgresWorkoutRepository;
 use sqlx::postgres::PgPoolOptions;

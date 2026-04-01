@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct User {
     pub id: i32,
     pub username: String,
-    // ... other fields
+    pub birth_year: Option<i32>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
