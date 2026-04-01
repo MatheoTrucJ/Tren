@@ -1,4 +1,5 @@
 //! Repositories - Data access layer and database operations
 
-// Add your repository modules here
-// Example: pub mod user_repository;
+pub mod workout_repository;
+
+pub use workout_repository::{WorkoutRepository, WorkoutRepositoryImpl};
