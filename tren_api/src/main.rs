@@ -3,6 +3,7 @@ mod services;
 mod repositories;
 mod models;
 mod rows;
+mod conversions;
 
 use repositories::PostgresWorkoutRepository;
 use sqlx::postgres::PgPoolOptions;
