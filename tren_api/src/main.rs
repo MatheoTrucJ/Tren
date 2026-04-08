@@ -12,6 +12,8 @@ use repositories::PostgresWorkoutRepository;
 use services::{DefaultWorkoutService, WorkoutService};
 use sqlx::postgres::PgPoolOptions;
 
+use crate::services::workout_service;
+
 #[tokio::main]
 async fn main() {
     // Load environment variables from .env file
@@ -96,6 +98,19 @@ async fn main() {
                     Ok(()) => println!("Inserted sample workout for user_id=1"),
                     Err(e) => eprintln!("Failed to insert sample workout: {}", e),
                 }
+                match workout_service.get_all_workouts_for_user(1).await {
+                    Ok(workouts) => {
+                        for workout in workouts {
+                            println!("Name: {}", workout.name);
+                            for exercise in workout.exercises {
+                                println!("Exercise: {}", exercise.exercise.name);
+                            }
+                            println!();
+                        }
+                    }
+                    Err(e) => eprintln!("Failed to select all workout: {}", e),
+                }
+
             }
             Err(e) => {
                 eprintln!("Failed to connect to database: {}", e);
