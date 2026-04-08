@@ -1,15 +1,13 @@
-
-
-use std::collections::HashMap;
-use sqlx::{PgPool, Row, postgres::PgRow};
 use crate::models::*;
 use crate::rows::*;
 use anyhow::Result;
 use async_trait::async_trait;
+use sqlx::{postgres::PgRow, PgPool, Row};
+use std::collections::HashMap;
 
 const WORKOUT_FULL_QUERY: &str = "
     SELECT 
-        w.id as workout_id, w.name as workout_name, w.user_id,
+        w.id as workout_id, w.name as workout_name, w.description as workout_description, w.user_id,
         we.id as workout_exercise_id, we.exercise_order,
         e.id as exercise_id, e.name as exercise_name, e.description as exercise_description,
         ws.id as set_id, ws.set_order
@@ -27,6 +25,7 @@ pub trait WorkoutRepository {
     async fn get_all_workout_exercises(&self, workout_id: i32) -> Result<Vec<WorkoutExercise>>;
     async fn get_exercise_by_id(&self, exercise_id: i32) -> Result<Exercise>;
     async fn get_workout_sets(&self, workout_exercise_id: i32) -> Result<Vec<WorkoutSet>>;
+    async fn create_workout(&self, workout: &Workout) -> Result<()>;
 }
 
 /// PostgreSQL implementation of WorkoutRepository
@@ -85,7 +84,7 @@ impl WorkoutRepository for PostgresWorkoutRepository {
              LEFT JOIN exercise e ON e.id = we.exercise_id
              LEFT JOIN workout_set ws ON ws.workout_exercise_id = we.id
              WHERE we.workout_id = $1
-             ORDER BY we.exercise_order, ws.set_order"
+             ORDER BY we.exercise_order, ws.set_order",
         )
         .bind(workout_id)
         .fetch_all(&self.pool)
@@ -96,7 +95,7 @@ impl WorkoutRepository for PostgresWorkoutRepository {
 
     async fn get_exercise_by_id(&self, exercise_id: i32) -> Result<Exercise> {
         let row = sqlx::query_as::<_, ExerciseRow>(
-            "SELECT id, name, description FROM exercise WHERE id = $1"
+            "SELECT id, name, description FROM exercise WHERE id = $1",
         )
         .bind(exercise_id)
         .fetch_one(&self.pool)
@@ -114,13 +113,60 @@ impl WorkoutRepository for PostgresWorkoutRepository {
             "SELECT id, workout_exercise_id, set_order 
              FROM workout_set 
              WHERE workout_exercise_id = $1 
-             ORDER BY set_order ASC"
+             ORDER BY set_order ASC",
         )
         .bind(workout_exercise_id)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| WorkoutSet { id: r.id, set_order: r.set_order }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| WorkoutSet {
+                id: r.id,
+                set_order: r.set_order,
+            })
+            .collect())
+    }
+    async fn create_workout(&self, workout: &Workout) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        let workout_id: i32 = sqlx::query_scalar(
+            "INSERT INTO workout (name, description, user_id) 
+             VALUES ($1, $2, $3) 
+             RETURNING id",
+        )
+        .bind(&workout.name)
+        .bind(&workout.description)
+        .bind(workout.user_id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        for exercise in &workout.exercises {
+            let workout_exercise_id: i32 = sqlx::query_scalar(
+                "INSERT INTO workout_exercise (workout_id, exercise_id, exercise_order) 
+                 VALUES ($1, $2, $3) 
+                 RETURNING id",
+            )
+            .bind(workout_id)
+            .bind(exercise.exercise.id)
+            .bind(exercise.order_index)
+            .fetch_one(&mut *tx)
+            .await?;
+
+            for set in &exercise.sets {
+                sqlx::query(
+                    "INSERT INTO workout_set (workout_exercise_id, set_order) 
+                     VALUES ($1, $2)",
+                )
+                .bind(workout_exercise_id)
+                .bind(set.set_order)
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 }
 
@@ -136,6 +182,9 @@ fn assemble_workouts(rows: &[PgRow]) -> Vec<Workout> {
         workouts_map.entry(workout_id).or_insert_with(|| Workout {
             id: workout_id,
             name: row.get("workout_name"),
+            description: row
+                .get::<Option<String>, _>("workout_description")
+                .unwrap_or_default(),
             user_id: row.get("user_id"),
             exercises: vec![],
         });
@@ -143,15 +192,19 @@ fn assemble_workouts(rows: &[PgRow]) -> Vec<Workout> {
         // Process exercise (if present from LEFT JOIN)
         let we_id: Option<i32> = row.get("workout_exercise_id");
         if let Some(we_id) = we_id {
-            exercises_map.entry((workout_id, we_id)).or_insert_with(|| WorkoutExercise {
-                exercise: Exercise {
-                    id: row.get("exercise_id"),
-                    name: row.get("exercise_name"),
-                    description: row.get::<Option<String>, _>("exercise_description").unwrap_or_default(),
-                },
-                order_index: row.get("exercise_order"),
-                sets: vec![],
-            });
+            exercises_map
+                .entry((workout_id, we_id))
+                .or_insert_with(|| WorkoutExercise {
+                    exercise: Exercise {
+                        id: row.get("exercise_id"),
+                        name: row.get("exercise_name"),
+                        description: row
+                            .get::<Option<String>, _>("exercise_description")
+                            .unwrap_or_default(),
+                    },
+                    order_index: row.get("exercise_order"),
+                    sets: vec![],
+                });
 
             // Process set (if present from LEFT JOIN)
             let set_id: Option<i32> = row.get("set_id");
@@ -169,12 +222,11 @@ fn assemble_workouts(rows: &[PgRow]) -> Vec<Workout> {
 
     // Orders sets by set_order and attaches them to exercises
     for ((_, we_id), exercise) in exercises_map.iter_mut() {
-    if let Some(mut sets) = seen_sets.remove(we_id) {
-        sets.sort_by_key(|s| s.set_order);
-        exercise.sets = sets;
+        if let Some(mut sets) = seen_sets.remove(we_id) {
+            sets.sort_by_key(|s| s.set_order);
+            exercise.sets = sets;
         }
     }
-
 
     // Attach exercises to workouts
     for ((workout_id, _), exercise) in exercises_map {
@@ -201,15 +253,19 @@ fn assemble_exercises(rows: &[PgRow]) -> Vec<WorkoutExercise> {
         let we_id: Option<i32> = row.get("workout_exercise_id");
         let Some(we_id) = we_id else { continue };
 
-        exercises_map.entry(we_id).or_insert_with(|| WorkoutExercise {
-            exercise: Exercise {
-                id: row.get("exercise_id"),
-                name: row.get("exercise_name"),
-                description: row.get::<Option<String>, _>("exercise_description").unwrap_or_default(),
-            },
-            order_index: row.get("exercise_order"),
-            sets: vec![],
-        });
+        exercises_map
+            .entry(we_id)
+            .or_insert_with(|| WorkoutExercise {
+                exercise: Exercise {
+                    id: row.get("exercise_id"),
+                    name: row.get("exercise_name"),
+                    description: row
+                        .get::<Option<String>, _>("exercise_description")
+                        .unwrap_or_default(),
+                },
+                order_index: row.get("exercise_order"),
+                sets: vec![],
+            });
 
         let set_id: Option<i32> = row.get("set_id");
         if let Some(set_id) = set_id {

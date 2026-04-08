@@ -2,4 +2,4 @@
 
 pub mod workout_repository;
 
-pub use workout_repository::{WorkoutRepository, PostgresWorkoutRepository};
+pub use workout_repository::{PostgresWorkoutRepository, WorkoutRepository};

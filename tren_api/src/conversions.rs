@@ -1,8 +1,8 @@
 //! Conversions - Transform flat DB rows into nested domain models
 
-use std::collections::HashMap;
 use crate::models::*;
 use crate::rows::*;
+use std::collections::HashMap;
 
 // ============================================================================
 // Simple 1:1 conversions
@@ -62,10 +62,8 @@ pub fn assemble_workout(
     sets: Vec<WorkoutSetRow>,
 ) -> Workout {
     // Build exercise lookup map
-    let exercise_map: HashMap<i32, Exercise> = exercises
-        .into_iter()
-        .map(|e| (e.id, e.into()))
-        .collect();
+    let exercise_map: HashMap<i32, Exercise> =
+        exercises.into_iter().map(|e| (e.id, e.into())).collect();
 
     // Group sets by workout_exercise_id
     let mut sets_by_workout_exercise: HashMap<i32, Vec<WorkoutSet>> = HashMap::new();
@@ -86,9 +84,7 @@ pub fn assemble_workout(
         .into_iter()
         .filter_map(|we| {
             let exercise = exercise_map.get(&we.exercise_id)?.clone();
-            let sets = sets_by_workout_exercise
-                .remove(&we.id)
-                .unwrap_or_default();
+            let sets = sets_by_workout_exercise.remove(&we.id).unwrap_or_default();
 
             Some(WorkoutExercise {
                 exercise,
@@ -104,6 +100,7 @@ pub fn assemble_workout(
     Workout {
         id: workout.id,
         name: workout.name,
+        description: workout.description.unwrap_or_default(),
         user_id: workout.user_id,
         exercises: workout_exercises_domain,
     }
@@ -116,10 +113,8 @@ pub fn assemble_session(
     exercises: Vec<ExerciseRow>,
 ) -> WorkoutSession {
     // Build exercise lookup map
-    let exercise_map: HashMap<i32, Exercise> = exercises
-        .into_iter()
-        .map(|e| (e.id, e.into()))
-        .collect();
+    let exercise_map: HashMap<i32, Exercise> =
+        exercises.into_iter().map(|e| (e.id, e.into())).collect();
 
     // Group set logs by exercise_id
     let mut logs_by_exercise: HashMap<i32, Vec<SetLog>> = HashMap::new();

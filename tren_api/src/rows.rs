@@ -35,6 +35,7 @@ pub struct UserExerciseRow {
 pub struct WorkoutRow {
     pub id: i32,
     pub name: String,
+    pub description: Option<String>,
     pub user_id: i32,
 }
 

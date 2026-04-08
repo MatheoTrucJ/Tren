@@ -22,8 +22,9 @@ pub struct Exercise {
 pub struct Workout {
     pub id: i32,
     pub name: String,
+    pub description: String,
     pub user_id: i32,
-    pub exercises: Vec<WorkoutExercise>, 
+    pub exercises: Vec<WorkoutExercise>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,7 +39,6 @@ pub struct WorkoutSet {
     pub id: i32,
     pub set_order: i32,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutSession {
@@ -62,7 +62,5 @@ pub struct SetLog {
     pub reps: i32,
     pub note: Option<String>,
     // Optional: link back to the template set if they followed it
-    pub template_set_id: Option<i32>, 
+    pub template_set_id: Option<i32>,
 }
-
-

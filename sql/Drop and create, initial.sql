@@ -35,6 +35,7 @@ CREATE TABLE user_exercises (
 CREATE TABLE workout (
     id SERIAL PRIMARY KEY,
     name VARCHAR(48) NOT NULL,
+    description TEXT,
     user_id INT REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -69,3 +70,32 @@ CREATE TABLE set_log (
     reps INT NOT NULL,
     note TEXT
 );
+
+INSERT INTO users (
+    username,
+    password_hash,
+    birth_year
+) VALUES (
+    'matheo',
+    'test123',
+    '2003'
+);
+
+INSERT INTO exercise (
+	name,
+	description
+) VALUES (
+	'Barbell Squat',
+	'Squat with a barbell on the back.'
+);
+
+INSERT INTO exercise (
+	name,
+	description
+) VALUES (
+	'Flat Benchpress',
+	'Benchpress on a flat bench.'
+);
+
+SELECT * FROM users, exercise;
+
