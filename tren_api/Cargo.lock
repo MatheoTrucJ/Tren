@@ -1919,6 +1919,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "futures",
+ "rand",
  "serde",
  "serde_json",
  "sqlx",

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use rand::Rng;
 
 use axum::{
     extract::{Path, State},
@@ -20,6 +21,7 @@ pub fn router(workout_service: WorkoutServiceState) -> Router {
         .route("/workouts/ping", get(workouts_ping))
         .route("/workouts", post(create_workout))
         .route("/workouts/exercises/user/:id", get(get_all_exercises_for_user))
+        .route("/workouts/goon", get(goon))
         .with_state(workout_service)
 }
 
@@ -85,4 +87,9 @@ async fn workouts_health() -> Json<Value> {
 
 async fn workouts_ping() -> Json<Value> {
     Json(json!({ "message": "pong" }))
+}
+
+async fn goon() -> Json<i32> {
+    let random_number = rand::thread_rng().gen_range(0..31);
+    Json(random_number)
 }

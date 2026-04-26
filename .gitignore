@@ -26,3 +26,5 @@ target
 # Aider on my desktop
 .aider.*
 .aiderignore
+aider.bat
+.aider*
