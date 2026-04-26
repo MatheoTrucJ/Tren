@@ -25,6 +25,7 @@ impl From<ExerciseRow> for Exercise {
             id: row.id,
             name: row.name,
             description: row.description.unwrap_or_default(),
+            is_personal: row.is_personal,
         }
     }
 }

@@ -18,6 +18,7 @@ pub struct ExerciseRow {
     pub id: i32,
     pub name: String,
     pub description: Option<String>,
+    pub is_personal: bool,
 }
 
 #[derive(Debug, Clone, FromRow)]

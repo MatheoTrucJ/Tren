@@ -3,14 +3,14 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::models::{Exercise, Workout, WorkoutExercise, WorkoutSet};
+use crate::models::{Exercise, Workout, WorkoutSet};
 use crate::repositories::WorkoutRepository;
 
 #[async_trait]
 pub trait WorkoutService: Send + Sync {
     async fn get_workout_by_id(&self, workout_id: i32) -> Result<Workout>;
     async fn get_all_workouts_for_user(&self, user_id: i32) -> Result<Vec<Workout>>;
-    async fn get_all_workout_exercises(&self, workout_id: i32) -> Result<Vec<WorkoutExercise>>;
+    async fn get_all_exercises_for_user(&self, id: i32) -> Result<Vec<Exercise>>;
     async fn get_exercise_by_id(&self, exercise_id: i32) -> Result<Exercise>;
     async fn get_workout_sets(&self, workout_exercise_id: i32) -> Result<Vec<WorkoutSet>>;
     async fn create_workout(&self, workout: &Workout) -> Result<()>;
@@ -38,10 +38,8 @@ impl WorkoutService for DefaultWorkoutService {
             .await
     }
 
-    async fn get_all_workout_exercises(&self, workout_id: i32) -> Result<Vec<WorkoutExercise>> {
-        self.workout_repository
-            .get_all_workout_exercises(workout_id)
-            .await
+    async fn get_all_exercises_for_user(&self, id: i32) -> Result<Vec<Exercise>> {
+        self.workout_repository.get_all_exercises_for_user(id).await
     }
 
     async fn get_exercise_by_id(&self, exercise_id: i32) -> Result<Exercise> {

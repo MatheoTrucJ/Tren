@@ -5,118 +5,53 @@ mod repositories;
 mod rows;
 mod services;
 
-use std::sync::Arc;
-
-use models::{Exercise, Workout, WorkoutExercise, WorkoutSet};
+use axum::{routing::get, Json, Router};
 use repositories::PostgresWorkoutRepository;
+use serde_json::{json, Value};
 use services::{DefaultWorkoutService, WorkoutService};
 use sqlx::postgres::PgPoolOptions;
-
-use crate::services::workout_service;
+use std::{net::SocketAddr, sync::Arc};
 
 #[tokio::main]
 async fn main() {
-    // Load environment variables from .env file
     dotenv::dotenv().ok();
 
-    println!("Tren API - Starting...");
+    let database_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set to start the API");
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("failed to connect to PostgreSQL");
 
-    // Database connection example (requires DATABASE_URL env var)
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_default();
+    let workout_repository = Arc::new(PostgresWorkoutRepository::new(pool));
+    let workout_service: Arc<dyn WorkoutService + Send + Sync> =
+        Arc::new(DefaultWorkoutService::new(workout_repository));
 
-    if !database_url.is_empty() {
-        match PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&database_url)
-            .await
-        {
-            Ok(pool) => {
-                // Dependency injection: create repository with pool
-                let workout_repo = Arc::new(PostgresWorkoutRepository::new(pool));
-                let workout_service = DefaultWorkoutService::new(workout_repo.clone());
-                println!("Database connected successfully");
-                println!(
-                    "PostgreSQL Repository ready for injection: {:?}",
-                    &workout_repo
-                );
-                println!("Workout service ready for injection");
+    let app = Router::new()
+        .route("/", get(root))
+        .route("/health", get(health))
+        .merge(controllers::workouts_controller::router(workout_service));
 
-                let sample_workout = Workout {
-                    id: 0,
-                    name: "Push/Pull Smoke Test".to_string(),
-                    description: "Inserted from main.rs to verify create_workout".to_string(),
-                    user_id: 1,
-                    exercises: vec![
-                        WorkoutExercise {
-                            exercise: Exercise {
-                                id: 1,
-                                name: "Squat".to_string(),
-                                description: "Barbell squat".to_string(),
-                            },
-                            order_index: 1,
-                            sets: vec![
-                                WorkoutSet {
-                                    id: 0,
-                                    set_order: 1,
-                                },
-                                WorkoutSet {
-                                    id: 0,
-                                    set_order: 2,
-                                },
-                                WorkoutSet {
-                                    id: 0,
-                                    set_order: 3,
-                                },
-                            ],
-                        },
-                        WorkoutExercise {
-                            exercise: Exercise {
-                                id: 2,
-                                name: "Bench Press".to_string(),
-                                description: "Barbell bench press".to_string(),
-                            },
-                            order_index: 2,
-                            sets: vec![
-                                WorkoutSet {
-                                    id: 0,
-                                    set_order: 1,
-                                },
-                                WorkoutSet {
-                                    id: 0,
-                                    set_order: 2,
-                                },
-                                WorkoutSet {
-                                    id: 0,
-                                    set_order: 3,
-                                },
-                            ],
-                        },
-                    ],
-                };
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|value| value.parse::<u16>().ok())
+        .unwrap_or(3000);
+    let address = SocketAddr::from(([127, 0, 0, 1], port));
 
-                match workout_service.create_workout(&sample_workout).await {
-                    Ok(()) => println!("Inserted sample workout for user_id=1"),
-                    Err(e) => eprintln!("Failed to insert sample workout: {}", e),
-                }
-                match workout_service.get_all_workouts_for_user(1).await {
-                    Ok(workouts) => {
-                        for workout in workouts {
-                            println!("Name: {}", workout.name);
-                            for exercise in workout.exercises {
-                                println!("Exercise: {}", exercise.exercise.name);
-                            }
-                            println!();
-                        }
-                    }
-                    Err(e) => eprintln!("Failed to select all workout: {}", e),
-                }
+    println!("Tren API listening on http://{}", address);
 
-            }
-            Err(e) => {
-                eprintln!("Failed to connect to database: {}", e);
-            }
-        }
-    } else {
-        println!("DATABASE_URL not set, skipping database connection");
-    }
+    let listener = tokio::net::TcpListener::bind(address)
+        .await
+        .expect("failed to bind TCP listener");
+
+    axum::serve(listener, app).await.expect("server failed");
+}
+
+async fn root() -> &'static str {
+    "Tren API is running"
+}
+
+async fn health() -> Json<Value> {
+    Json(json!({ "status": "ok" }))
 }
