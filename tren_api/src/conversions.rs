@@ -46,7 +46,6 @@ impl From<SetLogRow> for SetLog {
             weight: row.weight,
             reps: row.reps,
             note: row.note,
-            workout_set_id: row.workout_set_id,
         }
     }
 }
@@ -110,6 +109,8 @@ pub fn assemble_workout(
 /// Assembles a full WorkoutSession with nested exercise logs from flat rows
 pub fn assemble_session(
     session: WorkoutSessionRow,
+    session_exercises: Vec<SessionExerciseRow>,
+    session_sets: Vec<SessionSetRow>,
     set_logs: Vec<SetLogRow>,
     exercises: Vec<ExerciseRow>,
 ) -> WorkoutSession {
@@ -117,29 +118,58 @@ pub fn assemble_session(
     let exercise_map: HashMap<i32, Exercise> =
         exercises.into_iter().map(|e| (e.id, e.into())).collect();
 
-    // Group set logs by exercise_id
-    let mut logs_by_exercise: HashMap<i32, Vec<SetLog>> = HashMap::new();
+    // Group set logs by session_set_id
+    let mut logs_by_session_set: HashMap<i32, Vec<SetLog>> = HashMap::new();
     for log in set_logs {
-        let exercise_id = log.exercise_id;
-        logs_by_exercise
-            .entry(exercise_id)
+        logs_by_session_set
+            .entry(log.session_set_id)
             .or_default()
             .push(log.into());
     }
 
-    // Build session exercise logs
-    let logged_exercises: Vec<SessionExerciseLog> = logs_by_exercise
+    // Build session sets grouped by session_exercise_id
+    let mut sets_by_session_exercise: HashMap<i32, Vec<SessionSet>> = HashMap::new();
+    for session_set in session_sets {
+        let logs = logs_by_session_set
+            .remove(&session_set.id)
+            .unwrap_or_default();
+
+        sets_by_session_exercise
+            .entry(session_set.session_exercise_id)
+            .or_default()
+            .push(SessionSet {
+                id: session_set.id,
+                set_order: session_set.set_order,
+                logs,
+            });
+    }
+
+    for sets in sets_by_session_exercise.values_mut() {
+        sets.sort_by_key(|s| s.set_order);
+    }
+
+    let mut logged_exercises: Vec<SessionExerciseLog> = session_exercises
         .into_iter()
-        .filter_map(|(exercise_id, sets)| {
-            let exercise = exercise_map.get(&exercise_id)?.clone();
-            Some(SessionExerciseLog { exercise, sets })
+        .filter_map(|session_exercise| {
+            let exercise = exercise_map.get(&session_exercise.exercise_id)?.clone();
+            let sets = sets_by_session_exercise
+                .remove(&session_exercise.id)
+                .unwrap_or_default();
+
+            Some(SessionExerciseLog {
+                id: session_exercise.id,
+                exercise,
+                exercise_order: session_exercise.exercise_order,
+                sets,
+            })
         })
         .collect();
+
+    logged_exercises.sort_by_key(|exercise| exercise.exercise_order);
 
     WorkoutSession {
         id: session.id,
         user_id: session.user_id,
-        workout_id: session.workout_id,
         start_time: session.start_time,
         end_time: session.end_time,
         notes: session.notes,

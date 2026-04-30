@@ -59,18 +59,31 @@ pub struct WorkoutSetRow {
 pub struct WorkoutSessionRow {
     pub id: i32,
     pub user_id: i32,
-    pub workout_id: Option<i32>,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub notes: Option<String>,
 }
 
 #[derive(Debug, Clone, FromRow)]
-pub struct SetLogRow {
+pub struct SessionExerciseRow {
     pub id: i32,
     pub session_id: i32,
     pub exercise_id: i32,
-    pub workout_set_id: Option<i32>,
+    pub exercise_order: i32,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct SessionSetRow {
+    pub id: i32,
+    pub session_exercise_id: i32,
+    pub set_order: i32,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct SetLogRow {
+    pub id: i32,
+    pub exercise_id: i32,
+    pub session_set_id: i32,
     pub weight: Option<f64>,
     pub reps: i32,
     pub note: Option<String>,

@@ -45,7 +45,6 @@ pub struct WorkoutSet {
 pub struct WorkoutSession {
     pub id: i32,
     pub user_id: i32,
-    pub workout_id: Option<i32>,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub notes: Option<String>,
@@ -54,8 +53,17 @@ pub struct WorkoutSession {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionExerciseLog {
+    pub id: i32,
     pub exercise: Exercise,
-    pub sets: Vec<SetLog>,
+    pub exercise_order: i32,
+    pub sets: Vec<SessionSet>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionSet {
+    pub id: i32,
+    pub set_order: i32,
+    pub logs: Vec<SetLog>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,6 +72,4 @@ pub struct SetLog {
     pub weight: Option<f64>,
     pub reps: i32,
     pub note: Option<String>,
-    // Optional: link back to the template set if they followed it
-    pub workout_set_id: Option<i32>,
 }

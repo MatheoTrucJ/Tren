@@ -1,5 +1,7 @@
 
 DROP TABLE IF EXISTS set_log CASCADE;
+DROP TABLE IF EXISTS session_set CASCADE;
+DROP TABLE IF EXISTS session_exercise CASCADE;
 DROP TABLE IF EXISTS workout_session CASCADE;
 DROP TABLE IF EXISTS workout_set CASCADE;
 DROP TABLE IF EXISTS workout_exercise CASCADE;
@@ -44,31 +46,47 @@ CREATE TABLE workout_exercise (
     id SERIAL PRIMARY KEY,
     workout_id INT NOT NULL REFERENCES workout(id) ON DELETE CASCADE,
     exercise_id INT NOT NULL REFERENCES exercise(id),
-    exercise_order INT NOT NULL 
+    exercise_order INT NOT NULL CHECK (exercise_order > 0),
+    CONSTRAINT uq_workout_exercise_order UNIQUE (workout_id, exercise_order)
 );
 
 CREATE TABLE workout_set (
     id SERIAL PRIMARY KEY,
     workout_exercise_id INT NOT NULL REFERENCES workout_exercise(id) ON DELETE CASCADE,
-    set_order INT NOT NULL
+    set_order INT NOT NULL CHECK (set_order > 0),
+    CONSTRAINT uq_workout_set_order UNIQUE (workout_exercise_id, set_order)
 );
 
 CREATE TABLE workout_session (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    workout_id INT REFERENCES workout(id) ON DELETE SET NULL,
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ,
-    notes TEXT
+    notes TEXT,
+    CONSTRAINT chk_session_time_order CHECK (end_time IS NULL OR end_time >= start_time)
+);
+
+CREATE TABLE session_exercise (
+    id SERIAL PRIMARY KEY,
+    session_id INT NOT NULL REFERENCES workout_session(id) ON DELETE CASCADE,
+    exercise_id INT NOT NULL REFERENCES exercise(id),
+    exercise_order INT NOT NULL CHECK (exercise_order > 0),
+    CONSTRAINT uq_session_exercise_order UNIQUE (session_id, exercise_order)
+);
+
+CREATE TABLE session_set (
+    id SERIAL PRIMARY KEY,
+    session_exercise_id INT NOT NULL REFERENCES session_exercise(id) ON DELETE CASCADE,
+    set_order INT NOT NULL CHECK (set_order > 0),
+    CONSTRAINT uq_session_set_order UNIQUE (session_exercise_id, set_order)
 );
 
 CREATE TABLE set_log (
     id SERIAL PRIMARY KEY,
-    session_id INT NOT NULL REFERENCES workout_session(id) ON DELETE CASCADE,
     exercise_id INT NOT NULL REFERENCES exercise(id),
-    workout_set_id INT REFERENCES workout_set(id) ON DELETE SET NULL,
-    weight DECIMAL(6,2),
-    reps INT NOT NULL,
+    session_set_id INT NOT NULL REFERENCES session_set(id) ON DELETE CASCADE,
+    weight DECIMAL(6,2) CHECK (weight IS NULL OR weight >= 0),
+    reps INT NOT NULL CHECK (reps > 0),
     note TEXT
 );
 

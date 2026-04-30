@@ -81,12 +81,11 @@ impl WorkoutRepository for PostgresWorkoutRepository {
         }
 
         let session_id: i32 = sqlx::query_scalar(
-            "INSERT INTO workout_session (user_id, workout_id, start_time, end_time, notes)
-             VALUES ($1, $2, $3, $4, $5)
+            "INSERT INTO workout_session (user_id, start_time, end_time, notes)
+             VALUES ($1, $2, $3, $4)
              RETURNING id",
         )
         .bind(workout_session.user_id)
-        .bind(workout_session.workout_id)
         .bind(workout_session.start_time)
         .bind(workout_session.end_time)
         .bind(&workout_session.notes)
@@ -94,19 +93,41 @@ impl WorkoutRepository for PostgresWorkoutRepository {
         .await?;
 
         for exercise_log in &workout_session.logged_exercises {
-            for set_log in &exercise_log.sets {
-                sqlx::query(
-                    "INSERT INTO set_log (session_id, exercise_id, workout_set_id, weight, reps, note)
-                     VALUES ($1, $2, $3, $4, $5, $6)",
+            let session_exercise_id: i32 = sqlx::query_scalar(
+                "INSERT INTO session_exercise (session_id, exercise_id, exercise_order)
+                 VALUES ($1, $2, $3)
+                 RETURNING id",
+            )
+            .bind(session_id)
+            .bind(exercise_log.exercise.id)
+            .bind(exercise_log.exercise_order)
+            .fetch_one(&mut *tx)
+            .await?;
+
+            for session_set in &exercise_log.sets {
+                let session_set_id: i32 = sqlx::query_scalar(
+                    "INSERT INTO session_set (session_exercise_id, set_order)
+                     VALUES ($1, $2)
+                     RETURNING id",
                 )
-                .bind(session_id)
-                .bind(exercise_log.exercise.id)
-                .bind(set_log.workout_set_id)
-                .bind(set_log.weight)
-                .bind(set_log.reps)
-                .bind(&set_log.note)
-                .execute(&mut *tx)
+                .bind(session_exercise_id)
+                .bind(session_set.set_order)
+                .fetch_one(&mut *tx)
                 .await?;
+
+                for set_log in &session_set.logs {
+                    sqlx::query(
+                        "INSERT INTO set_log (exercise_id, session_set_id, weight, reps, note)
+                         VALUES ($1, $2, $3, $4, $5)",
+                    )
+                    .bind(exercise_log.exercise.id)
+                    .bind(session_set_id)
+                    .bind(set_log.weight)
+                    .bind(set_log.reps)
+                    .bind(&set_log.note)
+                    .execute(&mut *tx)
+                    .await?;
+                }
             }
         }
 
