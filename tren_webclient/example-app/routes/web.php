@@ -1,13 +1,12 @@
 <?php
 
+use App\Livewire\Exercises;
+use App\Livewire\Workout;
 use Illuminate\Support\Facades\Route;
-use App\Livewire\WorkoutList;
-use Livewire\Volt\Volt;
 
 Route::view('/', 'welcome')->name('home');
-Route::get('/workouts', function () {
-    return view('livewire-test');
-});
+Route::get('/exercises', Exercises::class);
+Route::get('/workouts', Workout::class);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');

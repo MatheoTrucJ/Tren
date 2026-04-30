@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'tren_api' => [
+        'url' => env('TREN_API_URL', 'http://127.0.0.1:3000'),
+    ],
+
 ];
