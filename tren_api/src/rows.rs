@@ -10,7 +10,7 @@ pub struct UserRow {
     pub username: String,
     pub password_hash: String,
     pub birth_year: Option<i32>,
-    pub created_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, FromRow)]

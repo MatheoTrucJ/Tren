@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use rand::Rng;
+use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
@@ -9,7 +9,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 
-use crate::models::{Exercise, Workout};
+use crate::models::{Exercise, Workout, WorkoutSession};
 use crate::services::WorkoutService;
 
 type WorkoutServiceState = Arc<dyn WorkoutService + Send + Sync>;
@@ -20,8 +20,12 @@ pub fn router(workout_service: WorkoutServiceState) -> Router {
         .route("/workouts/health", get(workouts_health))
         .route("/workouts/ping", get(workouts_ping))
         .route("/workouts", post(create_workout))
-        .route("/workouts/exercises/user/:id", get(get_all_exercises_for_user))
+        .route(
+            "/workouts/exercises/user/:id",
+            get(get_all_exercises_for_user),
+        )
         .route("/workouts/goon", get(goon))
+        .route("/workouts/user/:id", post(finish_workout))
         .with_state(workout_service)
 }
 
@@ -63,7 +67,8 @@ async fn create_workout(
         })
 }
 
-async fn get_all_exercises_for_user(State(workout_service): State<WorkoutServiceState>,
+async fn get_all_exercises_for_user(
+    State(workout_service): State<WorkoutServiceState>,
     Path(id): Path<i32>,
 ) -> Result<Json<Vec<Exercise>>, (StatusCode, Json<Value>)> {
     workout_service
@@ -75,6 +80,26 @@ async fn get_all_exercises_for_user(State(workout_service): State<WorkoutService
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({
                     "error": "failed to fetch exercises",
+                    "details": error.to_string()
+                })),
+            )
+        })
+}
+
+async fn finish_workout(
+    State(workout_service): State<WorkoutServiceState>,
+    Path(user_id): Path<i32>,
+    Json(workout_session): Json<WorkoutSession>,
+) -> Result<StatusCode, (StatusCode, Json<Value>)> {
+    workout_service
+        .insert_workout_session(user_id, &workout_session)
+        .await
+        .map(|_| StatusCode::CREATED)
+        .map_err(|error| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "failed to insert workout session",
                     "details": error.to_string()
                 })),
             )

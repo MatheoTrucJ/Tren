@@ -9,7 +9,7 @@ const WORKOUT_FULL_QUERY: &str = "
     SELECT 
         w.id as workout_id, w.name as workout_name, w.description as workout_description, w.user_id,
         we.id as workout_exercise_id, we.exercise_order,
-        e.id as exercise_id, e.name as exercise_name, e.description as exercise_description,
+        e.id as exercise_id, e.name as exercise_name, e.description as exercise_description, e.is_personal,
         ws.id as set_id, ws.set_order
     FROM workout w
     LEFT JOIN workout_exercise we ON we.workout_id = w.id
@@ -26,6 +26,11 @@ pub trait WorkoutRepository {
     async fn get_exercise_by_id(&self, exercise_id: i32) -> Result<Exercise>;
     async fn get_workout_sets(&self, workout_exercise_id: i32) -> Result<Vec<WorkoutSet>>;
     async fn create_workout(&self, workout: &Workout) -> Result<()>;
+    async fn insert_workout_session(
+        &self,
+        user_id: i32,
+        workout_session: &WorkoutSession,
+    ) -> Result<()>;
 }
 
 /// PostgreSQL implementation of WorkoutRepository
@@ -58,6 +63,55 @@ impl WorkoutRepository for PostgresWorkoutRepository {
         }
 
         Ok(assemble_workouts(&rows).remove(0))
+    }
+
+    async fn insert_workout_session(
+        &self,
+        user_id: i32,
+        workout_session: &WorkoutSession,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        if workout_session.user_id != user_id {
+            anyhow::bail!(
+                "path user_id {} does not match workout_session.user_id {}",
+                user_id,
+                workout_session.user_id
+            );
+        }
+
+        let session_id: i32 = sqlx::query_scalar(
+            "INSERT INTO workout_session (user_id, workout_id, start_time, end_time, notes)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id",
+        )
+        .bind(workout_session.user_id)
+        .bind(workout_session.workout_id)
+        .bind(workout_session.start_time)
+        .bind(workout_session.end_time)
+        .bind(&workout_session.notes)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        for exercise_log in &workout_session.logged_exercises {
+            for set_log in &exercise_log.sets {
+                sqlx::query(
+                    "INSERT INTO set_log (session_id, exercise_id, workout_set_id, weight, reps, note)
+                     VALUES ($1, $2, $3, $4, $5, $6)",
+                )
+                .bind(session_id)
+                .bind(exercise_log.exercise.id)
+                .bind(set_log.workout_set_id)
+                .bind(set_log.weight)
+                .bind(set_log.reps)
+                .bind(&set_log.note)
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 
     async fn get_all_workouts_for_user(&self, user_id: i32) -> Result<Vec<Workout>> {
@@ -124,6 +178,7 @@ impl WorkoutRepository for PostgresWorkoutRepository {
             })
             .collect())
     }
+
     async fn create_workout(&self, workout: &Workout) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -198,7 +253,7 @@ fn assemble_workouts(rows: &[PgRow]) -> Vec<Workout> {
                         description: row
                             .get::<Option<String>, _>("exercise_description")
                             .unwrap_or_default(),
-                        is_personal: row.get("is_personal")
+                        is_personal: row.get("is_personal"),
                     },
                     order_index: row.get("exercise_order"),
                     sets: vec![],
@@ -249,7 +304,7 @@ fn assemble_exercises(rows: &[ExerciseRow]) -> Vec<Exercise> {
             id: row.id,
             name: row.name.clone(),
             description: row.description.clone().unwrap_or_default(),
-            is_personal: row.is_personal
+            is_personal: row.is_personal,
         })
         .collect()
 }

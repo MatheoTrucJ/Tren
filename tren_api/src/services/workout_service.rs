@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::models::{Exercise, Workout, WorkoutSet};
+use crate::models::*;
 use crate::repositories::WorkoutRepository;
 
 #[async_trait]
@@ -14,6 +14,11 @@ pub trait WorkoutService: Send + Sync {
     async fn get_exercise_by_id(&self, exercise_id: i32) -> Result<Exercise>;
     async fn get_workout_sets(&self, workout_exercise_id: i32) -> Result<Vec<WorkoutSet>>;
     async fn create_workout(&self, workout: &Workout) -> Result<()>;
+    async fn insert_workout_session(
+        &self,
+        user_id: i32,
+        workout_session: &WorkoutSession,
+    ) -> Result<()>;
 }
 
 pub struct DefaultWorkoutService {
@@ -30,6 +35,16 @@ impl DefaultWorkoutService {
 impl WorkoutService for DefaultWorkoutService {
     async fn get_workout_by_id(&self, workout_id: i32) -> Result<Workout> {
         self.workout_repository.get_workout_by_id(workout_id).await
+    }
+
+    async fn insert_workout_session(
+        &self,
+        user_id: i32,
+        workout_session: &WorkoutSession,
+    ) -> Result<()> {
+        self.workout_repository
+            .insert_workout_session(user_id, workout_session)
+            .await
     }
 
     async fn get_all_workouts_for_user(&self, user_id: i32) -> Result<Vec<Workout>> {

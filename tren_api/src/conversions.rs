@@ -14,7 +14,7 @@ impl From<UserRow> for User {
             id: row.id,
             username: row.username,
             birth_year: row.birth_year,
-            created_at: row.created_at.unwrap_or_default(),
+            created_at: row.created_at,
         }
     }
 }
@@ -46,7 +46,7 @@ impl From<SetLogRow> for SetLog {
             weight: row.weight,
             reps: row.reps,
             note: row.note,
-            template_set_id: row.workout_set_id,
+            workout_set_id: row.workout_set_id,
         }
     }
 }
@@ -138,6 +138,8 @@ pub fn assemble_session(
 
     WorkoutSession {
         id: session.id,
+        user_id: session.user_id,
+        workout_id: session.workout_id,
         start_time: session.start_time,
         end_time: session.end_time,
         notes: session.notes,

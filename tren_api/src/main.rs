@@ -12,6 +12,10 @@ use services::{DefaultWorkoutService, WorkoutService};
 use sqlx::postgres::PgPoolOptions;
 use std::{net::SocketAddr, sync::Arc};
 
+//Fix problemet mellem sql script og models af til at kunne insert en workout_session. Order nr for exerciseLog mangler osv osv.
+//problemet lige nu er, at de en workout_session skal tages som en template af en workout, men ikke nødvændigivs have direkte reference. 
+//Det skal laves om, men burde kræve minimal refactoring i resten af koden bortset fra models, sql scriptet og insert_workout_session, og conversions ofc.
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();

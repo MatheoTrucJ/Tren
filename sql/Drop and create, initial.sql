@@ -14,14 +14,14 @@ CREATE TABLE users (
     username VARCHAR(36) UNIQUE NOT NULL,
     password_hash VARCHAR(100) NOT NULL,
     birth_year INT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE exercise (
     id SERIAL PRIMARY KEY,
     name VARCHAR(48) NOT NULL,
     description TEXT,
-    is_personal BOOLEAN
+    is_personal BOOLEAN NOT NULL
 );
 
 CREATE TABLE general_exercises (
@@ -30,32 +30,32 @@ CREATE TABLE general_exercises (
 
 CREATE TABLE user_exercises (
     exercise_id INT REFERENCES exercise(id) ON DELETE CASCADE PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE workout (
     id SERIAL PRIMARY KEY,
     name VARCHAR(48) NOT NULL,
     description TEXT,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE workout_exercise (
     id SERIAL PRIMARY KEY,
-    workout_id INT REFERENCES workout(id) ON DELETE CASCADE,
-    exercise_id INT REFERENCES exercise(id),
+    workout_id INT NOT NULL REFERENCES workout(id) ON DELETE CASCADE,
+    exercise_id INT NOT NULL REFERENCES exercise(id),
     exercise_order INT NOT NULL 
 );
 
 CREATE TABLE workout_set (
     id SERIAL PRIMARY KEY,
-    workout_exercise_id INT REFERENCES workout_exercise(id) ON DELETE CASCADE,
+    workout_exercise_id INT NOT NULL REFERENCES workout_exercise(id) ON DELETE CASCADE,
     set_order INT NOT NULL
 );
 
 CREATE TABLE workout_session (
     id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     workout_id INT REFERENCES workout(id) ON DELETE SET NULL,
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ,
@@ -64,8 +64,8 @@ CREATE TABLE workout_session (
 
 CREATE TABLE set_log (
     id SERIAL PRIMARY KEY,
-    session_id INT REFERENCES workout_session(id) ON DELETE CASCADE,
-    exercise_id INT REFERENCES exercise(id),
+    session_id INT NOT NULL REFERENCES workout_session(id) ON DELETE CASCADE,
+    exercise_id INT NOT NULL REFERENCES exercise(id),
     workout_set_id INT REFERENCES workout_set(id) ON DELETE SET NULL,
     weight DECIMAL(6,2),
     reps INT NOT NULL,
