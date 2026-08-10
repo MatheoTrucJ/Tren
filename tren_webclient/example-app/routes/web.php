@@ -1,12 +1,11 @@
 <?php
 
-use App\Livewire\Exercises;
-use App\Livewire\Workout;
+use App\Http\Controllers\WorkoutDemoController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
-Route::get('/exercises', Exercises::class);
-Route::get('/workouts', Workout::class);
+Route::get('/', [WorkoutDemoController::class, 'index'])->name('home');
+Route::get('/workouts', [WorkoutDemoController::class, 'index'])->name('workouts.index');
+Route::post('/workouts', [WorkoutDemoController::class, 'store'])->name('workouts.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
